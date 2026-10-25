@@ -145,6 +145,7 @@ def get_problem_approaches(leetcode_id: int):
 class CodeAnalysisRequest(BaseModel):
     code: str = Field(max_length=100_000)
     language: str = "python"
+    problem_id: int | None = None
 
 
 @app.post("/analyze")
@@ -153,9 +154,21 @@ def analyze(request: CodeAnalysisRequest):
     if request.language.lower() != "python":
         raise HTTPException(
             status_code=400,
-            detail="Only Python is supported currently."
+            detail="Only Python is supported currently.",
         )
 
-    result = analyze_code(request.code)
+    if request.problem_id is not None:
+        problem = get_problem_by_id(request.problem_id)
+
+        if problem is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Problem not found.",
+            )
+
+    result = analyze_code(
+        code=request.code,
+        problem_id=request.problem_id,
+    )
 
     return result
