@@ -1,8 +1,123 @@
-node_modules/
+# ==========================================
+
+# Python
+
+# ==========================================
+
+**pycache**/
+*.py[cod]
+*$py.class
+*.so
+
+# Python build and packaging
+
+build/
 dist/
+wheels/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Virtual environments
+
+.venv/
+venv/
+env/
+ENV/
+
+# Python test and coverage caches
+
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# Type checking and linting caches
+
+.mypy_cache/
+.pytype/
+.ruff_cache/
+.dmypy.json
+.pyre/
+
+# Jupyter
+
+.ipynb_checkpoints/
+
+# ==========================================
+
+# Node.js / React / Vite
+
+# ==========================================
+
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+
+# Vite cache
+
+.vite/
+
+# npm / yarn / pnpm debug logs
+
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# ==========================================
+
+# Environment variables and secrets
+
+# ==========================================
+
 .env
+.env.*
+!.env.example
+
+# ==========================================
+
+# Editors and IDEs
+
+# ==========================================
+
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+.idea/
+*.swp
+*.swo
+*~
+
+# ==========================================
+
+# Operating system files
+
+# ==========================================
+
 .DS_Store
 Thumbs.db
-.venv/
-.pytest_cache/
-__pycache__/
+Desktop.ini
+
+# ==========================================
+
+# Logs and temporary files
+
+# ==========================================
+
+*.log
+*.tmp
+*.temp
+
+# ==========================================
+
+# Project-specific generated files
+
+# ==========================================
+
+# Keep the curated DSA knowledge base tracked.
+
+# Do not ignore codebase.json.
