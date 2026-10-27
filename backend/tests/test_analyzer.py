@@ -1,5 +1,6 @@
 from app.analyzer.analyzer import analyze_code
 from app.analyzer.complexity_estimator import estimate_complexity
+from app.analyzer.hint_generator import generate_hint
 
 
 def test_nested_loops():
@@ -242,3 +243,46 @@ def test_complexity_invalid_syntax():
 
     assert result["status"] == "invalid_syntax"
     assert result["time"] == "Unknown"
+
+
+def test_two_sum_brute_force_hint_level_1():
+    result = generate_hint(1, "brute_force", 1)
+
+    assert result["available"] is True
+    assert result["level"] == 1
+    assert "comparisons" in result["message"]
+
+
+def test_two_sum_brute_force_hint_level_2():
+    result = generate_hint(1, "brute_force", 2)
+
+    assert result["available"] is True
+    assert result["level"] == 2
+    assert "data structure" in result["message"].lower()
+
+
+def test_two_sum_brute_force_hint_level_3():
+    result = generate_hint(1, "brute_force", 3)
+
+    assert result["available"] is True
+    assert result["level"] == 3
+    assert "complement" in result["message"].lower()
+
+
+def test_unsupported_problem():
+    result = generate_hint(999, "brute_force", 1)
+
+    assert result["available"] is False
+
+
+def test_invalid_hint_level():
+    result = generate_hint(1, "brute_force", 4)
+
+    assert result["available"] is False
+
+
+def test_unknown_pattern_gets_general_guidance():
+    result = generate_hint(1, "unknown", 1)
+
+    assert result["available"] is True
+    assert result["title"] == "General Guidance"

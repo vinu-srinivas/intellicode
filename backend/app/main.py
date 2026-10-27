@@ -1,26 +1,27 @@
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from app.analyzer.analyzer import analyze_code
 
+from app.analyzer.analyzer import analyze_code
 from app.knowledge_base import (
     get_problem_by_id,
     load_problems,
     public_problem_details,
     public_problem_summary,
 )
+from app.runner import run_code_tests
 
 
 app = FastAPI(
-    title="IntelliCode API",
-    description="Backend API for the IntelliCode DSA learning assistant.",
-    version="0.2.0",
+    title="SCRS API",
+    description="Deterministic Static Analysis & Code Review for DSA Practice in Python, Java, and C++.",
+    version="1.1.0",
 )
 
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -30,8 +31,12 @@ app.add_middleware(
 @app.get("/")
 def root():
     return {
-        "message": "Welcome to IntelliCode API",
+        "message": "Welcome to SCRS API",
+        "system": "SCRS Code Review System for Curated DSA Practice",
         "status": "running",
+        "version": "1.1.0",
+        "supported_languages": ["python", "java", "cpp"],
+        "mode": "deterministic_offline_non_llm",
     }
 
 
@@ -39,7 +44,7 @@ def root():
 def health_check():
     return {
         "status": "healthy",
-        "service": "IntelliCode API",
+        "service": "SCRS API",
     }
 
 
@@ -69,16 +74,14 @@ def list_problems(
         problems = [
             problem
             for problem in problems
-            if problem["difficulty"].casefold()
-            == difficulty.casefold()
+            if problem["difficulty"].casefold() == difficulty.casefold()
         ]
 
     if category:
         problems = [
             problem
             for problem in problems
-            if category.casefold()
-            in problem["category"].casefold()
+            if category.casefold() in problem["category"].casefold()
         ]
 
     if pattern:
@@ -93,7 +96,6 @@ def list_problems(
 
     if q:
         search_term = q.casefold()
-
         problems = [
             problem
             for problem in problems
@@ -142,24 +144,25 @@ def get_problem_approaches(leetcode_id: int):
         "primary_complexity": details["primary_complexity"],
     }
 
+
 class CodeAnalysisRequest(BaseModel):
     code: str = Field(max_length=100_000)
     language: str = "python"
     problem_id: int | None = None
+    hint_level: int = 1
 
 
 @app.post("/analyze")
 def analyze(request: CodeAnalysisRequest):
-
-    if request.language.lower() != "python":
+    lang = request.language.lower()
+    if lang not in {"python", "java", "cpp", "c++"}:
         raise HTTPException(
             status_code=400,
-            detail="Only Python is supported currently.",
+            detail=f"Unsupported language '{request.language}'. Supported: python, java, cpp.",
         )
 
     if request.problem_id is not None:
         problem = get_problem_by_id(request.problem_id)
-
         if problem is None:
             raise HTTPException(
                 status_code=404,
@@ -169,6 +172,54 @@ def analyze(request: CodeAnalysisRequest):
     result = analyze_code(
         code=request.code,
         problem_id=request.problem_id,
+        hint_level=request.hint_level,
+        language=lang,
     )
 
     return result
+
+
+class CodeRunRequest(BaseModel):
+    code: str = Field(max_length=100_000)
+    problem_id: int | None = None
+    language: str = "python"
+
+
+@app.post("/run")
+def run_code(request: CodeRunRequest):
+    return run_code_tests(
+        code=request.code,
+        problem_id=request.problem_id,
+        language=request.language,
+    )
+
+
+@app.websocket("/ws/analyze")
+async def websocket_analyze(websocket: WebSocket):
+    """
+    Real-time WebSocket endpoint for live debounced AST analysis
+    during active code editing (Python, Java, and C++).
+    """
+    await websocket.accept()
+    try:
+        while True:
+            data = await websocket.receive_json()
+            code = data.get("code", "")
+            problem_id = data.get("problem_id")
+            hint_level = data.get("hint_level", 1)
+            language = data.get("language", "python")
+
+            result = analyze_code(
+                code=code,
+                problem_id=problem_id,
+                hint_level=hint_level,
+                language=language,
+            )
+            await websocket.send_json(result)
+    except WebSocketDisconnect:
+        pass
+    except Exception:
+        try:
+            await websocket.close()
+        except Exception:
+            pass
